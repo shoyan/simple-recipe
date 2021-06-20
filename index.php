@@ -1,3 +1,38 @@
+<?php
+/**
+ * データベースの接続
+ */
+define('DB_HOST', '127.0.0.1');
+define('DB_NAME', 'recipe');
+define('DB_USER', 'root');
+define('DB_PASSWORD', 'root');
+define('DB_PORT', '3306');
+
+// 文字化け対策
+$options = array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET CHARACTER SET 'utf8'");
+
+// データベースの接続
+try {
+  $dbh = new PDO('mysql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME, DB_USER, DB_PASSWORD, $options);
+  $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+  echo $e->getMessage();
+  exit;
+}
+
+// レシピを取得
+$stmt = $dbh->prepare('SELECT * from recipes');
+$stmt->execute();
+$recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// 材料を取得
+foreach($recipes as $index => $recipe) {
+    $stmt = $dbh->prepare('SELECT * FROM materials WHERE recipe_id = ?');
+    $stmt->bindParam(1, $recipe['recipe_id'], PDO::PARAM_INT);
+    $stmt->execute();
+    $recipes[$index]['materials'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -29,22 +64,26 @@
         </ul>
         <div class="container">
             <div id="main">
+                <?php foreach($recipes as $recipe): ?>
                 <div class="box recipe">
                     <h2>新着レシピ</h2>
                     <div class="container">
                         <div class="left">
-                            <img src="./images/emanuel-ekstrom-qxvhDhjFy4o-unsplash 1.jpg" alt="" srcset="">
+                            <img src="./images/recipes/<?php echo $recipe['recipe_image']; ?>" alt="" srcset="">
                         </div>
                         <div class="right">
-                            <p>料理名</p>
+                            <p><?php echo $recipe['recipe_name']; ?></p>
                             <p>材料</p>
                             <ul>
-                                <li>マカロニ</li>
-                                <li>パセリ</li>
+                                <?php foreach($recipe['materials'] as $material): ?>
+                                    <li><?php echo $material['material_name']; ?></li>
+                                <?php endforeach ?>
                             </ul>
                         </div>
                     </div>
                 </div>
+                <?php endforeach ?>
+
                 <div class="box ranking">
                     <h2>ランキング</h2>
                     <div class="container">
